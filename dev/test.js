@@ -40,3 +40,5 @@ const currentBlockData = [
 // bitcoin.createNewBlock(5647, 'some93iuhfhash', 'hhd98ethe9block');
 
 //console.log(bitcoin.chain[2]);
+
+console.log(bitcoin.currentNodeUrl);

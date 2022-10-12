@@ -5,6 +5,8 @@ const Blockchain = require('./blockchain');
 const { v1: uuidv1 } = require('uuid');
 const port = process.argv[2]; // Refers to start command variables array, port var is the third variable of array
 const rp = require('request-promise');
+const { request } = require('express');
+const { removeAllListeners } = require('nodemon');
 
 const nodeAddress = uuidv1().split('-').join('');
 
@@ -80,19 +82,46 @@ app.post('/register-and-broadcast-node', (req, res) => {
         //Here we are registering every node with a new node in our network by hitting '/register-nodes-bulk' endpoint
         //use the data ..   
         const bulkRegisterOptions = {
-            uri: newNodeUrl + '/register-nodes-bulk'
+            uri: newNodeUrl + '/register-nodes-bulk',
+            method: 'POST',
+            body: { allNetworkNodes: [...bitcoin.networkNodes, bitcoin.currentNodeUrl]},
+            json: true
         };
+        return rp(bulkRegisterOptions);
+    })
+    .then(data => {
+        res.json({ note: 'New node registred successfully' });
     });
 });
 
 //Register a node with the network // Here it's just being accepted by other nodes 
+//Here every node should receive a broadcast sent by '/register-and-broadcast-node' endpoint
+//And only thing that this endpoint should do - register a new node with a node that receives this request
 app.post('/register-node', (req, res) => {
-
+    //Taking a new node url passed (the data that we send) in body and save in a variable
+    const newNodeUrl = req.body.newNodeUrl;
+    //Check if node is not present in the array of nodes
+    const nodeNotAlreadyPresent = bitcoin.networkNodes.indexOf(newNodeUrl) == -1;
+    //Check if a new node is not a current node
+    const notCurrentNode = bitcoin.currentNodeUrl !== newNodeUrl;
+    //Registering new node url with a node that receive this request
+    if (nodeNotAlreadyPresent && notCurrentNode) bitcoin.networkNodes.push(newNodeUrl);
+    
+    
+    res.json({ note: 'New node registered successfully.'})
 });
 
 //Register multiple nodes at once
 app.post('/register-nodes-bulk', (req,res) => {
-
+    const allNetworkNodes = req.body.allNetworkNodes;
+    //Looping through every node url of an array and register it with a new node
+    allNetworkNodes.forEach(networkNodeUrl => {
+        // register each node with current node which is a new node
+        const nodeNotAlreadyPresent = bitcoin.networkNodes.indexOf == -1;
+        const notCurrentNode = bitcoin.currentNodeUrl !== networkNodeUrl;
+        if (nodeNotAlreadyPresent && notCurrentNode) bitcoin.networkNodes.push(networkNodeUrl);
+    });
+    res.json({ note: "Bulk registration successful!" });
 });
 
 app.listen(port, () => {
